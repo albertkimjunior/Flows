@@ -1,19 +1,22 @@
 import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
-import iconImage from "assets/taskpuppy_icon_inactive.png"
+import inactiveImage from "assets/taskpuppy_icon_inactive.png"
+import activeImage from "assets/taskpuppy_icon_active.png"
 import icon1 from "assets/keys/icon1.png"
 import icon2 from "assets/keys/icon2.png"
 import icon3 from "assets/keys/icon3.png"
 import icon4 from "assets/keys/icon4.png"
 import icon5 from "assets/keys/icon5.png"
+import taskpuppySearchIcon from "assets/taskpuppy_searchbar_icon.png"
 import styleText from 'data-text:./content.css'
 import Groq from 'groq-sdk';
 import type { PlasmoGetStyle } from "plasmo"
 
 export const config: PlasmoCSConfig = {
   matches: ["<all_urls>"],
-  world: 'MAIN',
+  // world: 'MAIN',
   run_at: 'document_end',
+  css: ["font.css"]
 }
 
 import type { PlasmoGetOverlayAnchor } from "plasmo"
@@ -109,6 +112,18 @@ function Content() {
     }
   };
 
+  const toggleShowInput = () => {
+    setShowInput((prevShowInput) => {
+      if (prevShowInput) {
+        // If showInput is currently true, set it to false
+        return false;
+      } else {
+        // If showInput is currently false, return the previous value (no change)
+        return prevShowInput;
+      }
+    });
+  };
+
   // function to handle keydown event
   const handleToggleKeyDown = (event) => {
     const isToggleCommand = event.key === 'Option' || event.key === 'Alt';
@@ -116,11 +131,13 @@ function Content() {
     // if Option/Alt key is pressed, toggle the isOpen state
     if (isToggleCommand) {
       setIsOpen(!isOpen);
+      toggleShowInput();
     }
     // if Escape key is pressed, close the list always
     // also means that pressing Escape will not open the list view
     if (isExitCommand) {
       setIsOpen(false);
+      setShowInput(false);
     }
   };
 
@@ -152,19 +169,28 @@ function Content() {
         setFocusedIndex((prevIndex) => (prevIndex + 1) % items.length);
       } else if (event.key === 'ArrowUp') {
         setFocusedIndex((prevIndex) => (prevIndex - 1 + items.length) % items.length);
-      // }
-      // Modify this part of the handleListKeyDown function to execute actions
-      } else if (event.key === 'Enter' || event.key === 'Return') {
-        const selectedItem = data[focusedIndex];
-        console.log(selectedItem);
-        executeAction(selectedItem);
-        setIsOpen(false);
       }
-    // } else if (event.key === 'Enter' || event.key === 'Return') {
-    //   setShowInput(true);
-    //   setInputPlaceholder(items[focusedIndex]);
-    //   // setIsOpen(false);
-    // }
+      // ACTIVE BLOCK Modify this part of the handleListKeyDown function to execute actions
+      // } else if (event.key === 'Enter' || event.key === 'Return') {
+      //   const selectedItem = data[focusedIndex];
+      //   console.log(selectedItem);
+      //   executeAction(selectedItem);
+      //   setIsOpen(false);
+      // }
+      // ACTIVE BLOCK END
+    } else if (event.key === 'Enter' || event.key === 'Return') {
+      setShowInput(true);
+      setInputPlaceholder(items[focusedIndex]);
+      // setIsOpen(false);
+    } else if (event.key >= '1' && event.key <= '5') {
+      // Handle keys 1, 2, 3, 4, and 5
+      event.preventDefault();
+      const itemIndex = parseInt(event.key, 10) - 1; // Convert key to index (0-based)
+      if (itemIndex >= 0 && itemIndex < items.length) {
+        setFocusedIndex(itemIndex);
+        setShowInput(true);
+        setInputPlaceholder(items[itemIndex]);
+      }
     }
   };
 
@@ -183,27 +209,9 @@ function Content() {
         setInputPlaceholder(items[newIndex]);
         return newIndex;
       });
-    // } else if (event.key === 'Enter' || event.key === 'Return') {
-    //   // Execute action based on selected item
-    //   // TODO HERE - Execute action based on selected item
-    //   setShowInput(false);
-    //   setFocusedIndex((prevIndex) => {
-    //     const newIndex = (prevIndex + 1) % items.length;
-    //     setInputPlaceholder(items[newIndex]);
-    //     return newIndex;
-    //   });
-    //   listRef.current.focus();
-    //   console.log(actions[focusedIndex]);
-    // // General escape keys to close input
-    // // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
-    // } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
-    //   setShowInput(false);
-    // }
-    // Modify this part of the handleInputKeyDown function to execute actions
     } else if (event.key === 'Enter' || event.key === 'Return') {
       // Execute action based on selected item
-      const selectedItem = data[focusedIndex];
-      executeAction(selectedItem);
+      // TODO HERE - Execute action based on selected item
       setShowInput(false);
       setFocusedIndex((prevIndex) => {
         const newIndex = (prevIndex + 1) % items.length;
@@ -212,6 +220,10 @@ function Content() {
       });
       listRef.current.focus();
       console.log(actions[focusedIndex]);
+    // General escape keys to close input
+    // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
+    } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
+      setShowInput(false);
     }
   };
 
@@ -221,7 +233,7 @@ function Content() {
       <div style={{ position: "fixed", bottom: 20, right: 20 , display: 'flex', flexDirection: 'column-reverse', height: '40vh'}}>
         {/* Icon image */}
         <img
-          src={iconImage}
+          src={isOpen ? activeImage : inactiveImage}
           alt="Taskpuppy Icon"
           onClick={handleClick}
           className="main-icon"
@@ -236,15 +248,24 @@ function Content() {
             alignSelf: 'flex-end', // Align the list to the right edge of the icon
             padding: '1.3em',
             borderRadius: '0.5em',
+            outline: 'none',
           }}>
             {items.map((item, index) => (
               <li
               key={index}
               tabIndex={0}
               style={{
-                backgroundColor: focusedIndex === index ? 'lightgray' : 'transparent',
+                backgroundColor: focusedIndex === index ? 'rgba(255, 179, 179, 0.4)' : 'transparent',
+                border: focusedIndex === index ? '2px solid rgba(255, 96, 96, 0.8)' : 'none',
                 display: 'flex',
                 alignItems: 'center',
+                borderRadius: '0.5em',
+                padding: '0.3em 0.5em',
+                fontFamily: 'PressStart2P',
+                color: 'black',
+                fontSize: '0.7em',
+                margin: '0.7em 0',
+                outline: 'none',
               }}
               >
               <img src={iconImages[index]} alt={`Icon for ${item}`} style={{ width: '37px', height: '36px', marginRight: '0.5em' }} />
@@ -256,8 +277,9 @@ function Content() {
       </div>
       {/* Input field */}
       {showInput && (
-        <div style={{ position: 'fixed', bottom: '25%', left: '50%', transform: 'translate(-50%, 50%)' }}>
+        <div style={{ position: 'fixed', bottom: '35%', left: '50%', transform: 'translate(-50%, 50%)' }}>
           {/* The input field, when in focus, use handleInputKeyDown function to listen to key presses */}
+          <img src={taskpuppySearchIcon} alt="Search Icon" style={{ position: 'absolute', width: '36px', height: '34px', marginLeft: '0.9em', marginTop: '1.1em', zIndex: 2 }} />
           <input ref={inputRef} placeholder={inputPlaceholder} onKeyDown={handleInputKeyDown} className="custom-input"/>
         </div>
       )}
