@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
 import iconImage from "assets/taskpuppy_icon_inactive.png"
+import icon1 from "assets/keys/icon1.png"
+import icon2 from "assets/keys/icon2.png"
+import icon3 from "assets/keys/icon3.png"
+import icon4 from "assets/keys/icon4.png"
+import icon5 from "assets/keys/icon5.png"
 import styleText from 'data-text:./content.css'
 import Groq from 'groq-sdk';
 import type { PlasmoGetStyle } from "plasmo"
@@ -56,7 +61,7 @@ async function llm_process_options() {
 // state management for toggleable list
 // data structure notes for @Michael: Shortcut Title, Action (how the action should be executed) - inclusive of any relevant field, button, etc tags to carry it out
 const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
-const iconImages = ['assets/icon1.png', 'assets/icon2.png', 'assets/icon3.png', 'assets/icon4.png', 'assets/icon5.png'];
+const iconImages = [icon1, icon2, icon3, icon4, icon5];
 const actions = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5']; // placeholder for actions list
 
 function Content() {
@@ -186,32 +191,43 @@ function Content() {
   return (
     <div>
       {/* Larger div for the icon and list */}
-      <div style={{ position: "fixed", bottom: 20, right: 20 }}>
-        {/* List of icons */}
-        {isOpen && (
-          // The items, when in focus, use handleListKeyDown function to listen to key presses
-          <ul ref={listRef} tabIndex={-1} onKeyDown={handleListKeyDown}>
-            {items.map((item, index) => (
-              <li
-                key={index}
-                tabIndex={0}
-                style={{
-                  backgroundColor: focusedIndex === index ? 'lightgray' : 'transparent',
-                }}
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        )}
+      <div style={{ position: "fixed", bottom: 20, right: 20 , display: 'flex', flexDirection: 'column-reverse', height: '40vh'}}>
         {/* Icon image */}
         <img
           src={iconImage}
           alt="Taskpuppy Icon"
           onClick={handleClick}
+          className="main-icon"
         />
-        {/* Input field */}
+        {/* List of icons */}
+        {isOpen && (
+          // The items, when in focus, use handleListKeyDown function to listen to key presses
+          <ul ref={listRef} tabIndex={-1} onKeyDown={handleListKeyDown}
+          style={{
+            backgroundColor: 'rgba(227, 227, 227, 0.5)', // Light gray with 70% opacity
+            width: '20vw', // 10% of the viewport width
+            alignSelf: 'flex-end', // Align the list to the right edge of the icon
+            padding: '1.3em',
+            borderRadius: '0.5em',
+          }}>
+            {items.map((item, index) => (
+              <li
+              key={index}
+              tabIndex={0}
+              style={{
+                backgroundColor: focusedIndex === index ? 'lightgray' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              >
+              <img src={iconImages[index]} alt={`Icon for ${item}`} style={{ width: '37px', height: '36px', marginRight: '0.5em' }} />
+              <p>{item}</p>
+            </li>
+            ))}
+          </ul>
+        )}
       </div>
+      {/* Input field */}
       {showInput && (
         <div style={{ position: 'fixed', bottom: '25%', left: '50%', transform: 'translate(-50%, 50%)' }}>
           {/* The input field, when in focus, use handleInputKeyDown function to listen to key presses */}
