@@ -10,6 +10,7 @@ import icon4 from "assets/keys/icon4.png"
 import icon5 from "assets/keys/icon5.png"
 import taskpuppySearchIcon from "assets/taskpuppy_searchbar_icon.png"
 import styleText from 'data-text:./content.css'
+import Groq from 'groq-sdk';
 import type { PlasmoGetStyle } from "plasmo"
 
 export const config: PlasmoCSConfig = {
@@ -32,17 +33,54 @@ export const getStyle: PlasmoGetStyle = () => {
   return style
 }
 
+const currentURL = window.location.href;
+const raw_elements = getFilteredElementsAsCSV();
+const elements = raw_elements.replace(/(\r\n|\n|\r)/gm, "");
+console.log(elements);
+
+const groq = new Groq({ apiKey: "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", dangerouslyAllowBrowser: true });
+
+async function llm_process_options() {
+  const chatCompletion = await groq.chat.completions.create({
+    "messages": [
+      {
+        "role": "system",
+        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Any duplicate entries\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
+      },
+      {
+        "role": "user",
+        "content": `${elements}`
+      },
+    ],
+    "model": "llama3-70b-8192",
+    "temperature": 0,
+    "max_tokens": 1024,
+    "top_p": 1,
+    "stream": false,
+    "stop": null
+  });
+
+   console.log(chatCompletion.choices[0].message.content);
+   const json_output = chatCompletion.choices[0].message.content.match(/\[([^\]]+)\]/g);
+   console.log(json_output)
+   return JSON.parse(json_output[0]);
+}
+
+// console.log(elements);
+
 // state management for toggleable list
 // data structure notes for @Michael: Shortcut Title, Action (how the action should be executed) - inclusive of any relevant field, button, etc tags to carry it out
-const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
+// const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
 const iconImages = [icon1, icon2, icon3, icon4, icon5];
 const actions = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5']; // placeholder for actions list
 
 function Content() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const [showInput, setShowInput] = useState(false);
-  const [inputPlaceholder, setInputPlaceholder] = useState('');
+  const [data, setData] = useState<any>(null);
+  const [isOpen, setIsOpen] = useState(false); // state variable for isOpen list toggle status
+  const [focusedIndex, setFocusedIndex] = useState(0); // state variable for focusedIndex in Items list (the focused <li> tag)
+  const [showInput, setShowInput] = useState(false); // state variable for showInput input field toggle status
+  const [inputPlaceholder, setInputPlaceholder] = useState(''); // state variable for inputPlaceholder
+  const [inputValue, setInputValue] = useState(''); // state variable for inputValue
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const contentRef = useRef(null);
@@ -50,6 +88,25 @@ function Content() {
   // const [loaded, setLoaded] = useState(false);
   // later a value to adjust to use to display list or display loading indicator gif
   const loaded = true;
+
+  // Regular function that calls the async function using .then()
+  const handleProcessOptions = () => {
+    llm_process_options()
+      .then(result => {
+        setData(result);
+      })
+      .catch(error => {
+        console.error('Error processing options:', error);
+      });
+  };
+
+  // Use useEffect to call the function when the component mounts
+  useEffect(() => {
+    handleProcessOptions();
+  }, []);
+
+  // Add this line to extract the first 5 items and store their descriptions
+  const items = data ? data.slice(0, 5).map(item => item.description) : [];
 
   // function to handle click on icon
   // toggles the isOpen state
@@ -122,6 +179,7 @@ function Content() {
     }
   }, [showInput]);
 
+  console.log(data);
   // function to handle keydown event on list, used for list toggle navigation and to listen for "Enter/Return" key to show input
   const handleListKeyDown = (event) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -133,17 +191,27 @@ function Content() {
         setFocusedIndex((prevIndex) => (prevIndex - 1 + items.length) % items.length);
       }
     } else if (event.key === 'Enter' || event.key === 'Return') {
-      setShowInput(true);
-      setInputPlaceholder(items[focusedIndex]);
+      console.log(focusedIndex);
+      console.log(data[focusedIndex]);
+      if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
+        executeClickAction(data[focusedIndex]);
+      } else {
+        setShowInput(true);
+        setInputPlaceholder(items[focusedIndex]);
+      }
       // setIsOpen(false);
     } else if (event.key >= '1' && event.key <= '5') {
       // Handle keys 1, 2, 3, 4, and 5
       event.preventDefault();
       const itemIndex = parseInt(event.key, 10) - 1; // Convert key to index (0-based)
       if (itemIndex >= 0 && itemIndex < items.length) {
-        setFocusedIndex(itemIndex);
-        setShowInput(true);
-        setInputPlaceholder(items[itemIndex]);
+        if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
+          executeClickAction(data[focusedIndex]);
+        } else {
+          setFocusedIndex(itemIndex);
+          setShowInput(true);
+          setInputPlaceholder(items[itemIndex]);
+        }
       }
     }
   };
@@ -173,7 +241,9 @@ function Content() {
         return newIndex;
       });
       listRef.current.focus();
-      console.log(actions[focusedIndex]);
+      // console.log(actions[focusedIndex]);
+      console.log('Input value:', inputValue); // input value is logged into inputValue state variable, use as needed
+      executeInputAction(data[focusedIndex], inputValue);
     // General escape keys to close input
     // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
     } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
@@ -237,7 +307,7 @@ function Content() {
         <div style={{ position: 'fixed', bottom: '35%', left: '50%', transform: 'translate(-50%, 50%)' }}>
           {/* The input field, when in focus, use handleInputKeyDown function to listen to key presses */}
           <img src={taskpuppySearchIcon} alt="Search Icon" style={{ position: 'absolute', width: '36px', height: '34px', marginLeft: '0.9em', marginTop: '1.1em', zIndex: 2 }} />
-          <input ref={inputRef} placeholder={inputPlaceholder} onKeyDown={handleInputKeyDown} className="custom-input"/>
+          <input ref={inputRef} placeholder={inputPlaceholder} onKeyDown={handleInputKeyDown} className="custom-input" value={inputValue} onChange={(e) => setInputValue(e.target.value)}/>
         </div>
       )}
     </div>
@@ -267,13 +337,64 @@ function getFilteredElementsAsCSV() {
   const elements = getInteractableElements();
   return elements.map(el => {
     if (el.tagName.toLowerCase() === 'a') {
-      return `a href=${el.href} aria-label=${el.ariaLabel} text=${el.text}`;
+      let a_tag = `a href=${el.href}`;
+      if (el.ariaLabel) a_tag += ` aria-label=${el.ariaLabel}`;
+      if (el.text)      a_tag += ` text=${el.text}`;
+      return a_tag;
     } else if (el.tagName.toLowerCase() === 'button') {
-      return `button text=${el.text}`;
+      let button_tag = `button`;
+      if (el.ariaLabel) button_tag += ` aria-label=${el.ariaLabel}`;
+      if (el.text)      button_tag += ` text=${el.text}`;
+      if (el.type)      button_tag += ` type=${el.type}`;
+      return button_tag;
     } else if (el.tagName.toLowerCase() === 'input') {
-      return `input type=${el.type} id=${el.id} aria-label=${el.ariaLabel}`;
+      let input_tag = "input";
+      if (el.type)        input_tag += ` type=${el.type}`;
+      if (el.placeholder) input_tag += ` placeholder=${el.placeholder}`;
+      // if (el.id)          input_tag += ` id=${el.id}`;
+      if (el.ariaLabel)   input_tag += ` aria-label=${el.ariaLabel}`;
+      return input_tag;
     }
   }).join(',');
 }
+
+const findElement = (item) => {
+  const { tag, attributes } = item;
+  const selector = Object.entries(attributes)
+    .filter(([key, value]) => value !== '')
+    .map(([key, value]) => `[${key}="${value}"]`)
+    .join('');
+  console.log(`${tag}${selector}`)
+  return document.querySelector(`${tag}${selector}`);
+};
+
+// Add this function to handle actions based on the tag type
+const executeClickAction = (item) => {
+  const element = findElement(item);
+  if (element) {
+    if (item.tag === 'a' || item.tag === 'button') {
+      // Simulate a click action
+      element.click();
+      console.log(`Simulated click on ${item.description}`);
+    }
+  } else {
+    console.error(`Element not found for ${item.description}`);
+  }
+};
+
+// Add this function to handle actions based on the tag type
+const executeInputAction = (item, inputVal) => {
+  const element = findElement(item);
+  console.log(element);
+  if (element) {
+    if (item.tag === 'input') {
+      // Simulate typing into the input field
+      element.value = inputVal;
+      console.log(`Simulated typing in ${item.description}`);
+    }
+  } else {
+    console.error(`Element not found for ${item.description}`);
+  }
+};
 
 export default Content
