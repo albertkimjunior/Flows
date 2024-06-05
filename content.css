@@ -1,19 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@font-face {
+  font-family: "PressStart2P";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(data-base64:~assets/PressStart2P.ttf) format("ttf");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+.spotlight-input-outline {
+  position: fixed;
+  bottom: 35%;
+  left: 50%;
+  transform: 'translate(-50%, 0%)';
+}
 
 .custom-input {
   font-family: 'Inter', sans-serif;
-  font-size: 3em;
-  width: 30vw; /* 30% of the viewport width */
-  background-color: rgba(50, 50, 50, 0.6); /* Dark gray with 60% opacity */
+  font-size: 2.0em;
+  width: 40vw;
+  background-color: rgba(41, 41, 41, 0.9); /* Dark gray with 60% opacity */
   color: white;
   padding: 0.5em;
   border: none;
   outline: none;
+  border-radius: 0.5em;
+  padding-left: 2em;
 }
 
 .custom-input::placeholder {
   font-family: 'Inter', sans-serif;
-  color: rgba(255, 255, 255, 0.6); /* White with 60% opacity */
+  color: rgba(220, 220, 220, 0.6); /* White with 60% opacity */
 }
 
 #content-container {
