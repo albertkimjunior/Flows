@@ -34,8 +34,9 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 const currentURL = window.location.href;
-const raw_elements = getFilteredElementsAsCSV();
-const elements = raw_elements.replace(/(\r\n|\n|\r)/gm, "");
+let raw_elements = getFilteredElementsAsCSV();
+raw_elements = raw_elements.replace(/(\r\n|\n|\r)/gm, "");
+const elements = raw_elements.replace(/\s+/g, ' ');
 console.log(elements);
 
 const groq = new Groq({ apiKey: "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", dangerouslyAllowBrowser: true });
@@ -45,7 +46,7 @@ async function llm_process_options() {
     "messages": [
       {
         "role": "system",
-        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Any duplicate entries\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
+        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function. Only include elements with confidently determined functions.\n\nAdapt the output based on the webpage type. For example:\n* E-commerce: product search fields, sort/product filters, add-to-cart buttons.\n* Travel booking: destination search fields, sort/date filters, booking buttons.\n* Informational: search fields, table of contents links, citation links.\n* Professional networking: job search fields, sort/connection buttons, profile edit buttons.\n* Software development: repository search fields, sort/commit buttons, issue creation buttons.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Any duplicate entries\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
       },
       {
         "role": "user",
@@ -318,7 +319,8 @@ function Content() {
 function getInteractableElements() {
   // Define the selectors for interactable elements
   const selectors = [
-    'input', 'button', 'a[href]'
+    'input', 'button', 'textarea',
+    // 'a[href]'
   ];
 
   // Use querySelectorAll to find all matching elements
@@ -337,25 +339,28 @@ function getInteractableElements() {
 function getFilteredElementsAsCSV() {
   const elements = getInteractableElements();
   return elements.map(el => {
+    let tag = '';
     if (el.tagName.toLowerCase() === 'a') {
-      let a_tag = `a href=${el.href}`;
-      if (el.ariaLabel) a_tag += ` aria-label=${el.ariaLabel}`;
-      if (el.text)      a_tag += ` text=${el.text}`;
-      return a_tag;
+      tag = `a href="${el.href}"`;
     } else if (el.tagName.toLowerCase() === 'button') {
-      let button_tag = `button`;
-      if (el.ariaLabel) button_tag += ` aria-label=${el.ariaLabel}`;
-      if (el.text)      button_tag += ` text=${el.text}`;
-      if (el.type)      button_tag += ` type=${el.type}`;
-      return button_tag;
+      tag = "button";
+      // if (el.type)        tag += ` type=${el.type}`;
+      // console.log(tag);
     } else if (el.tagName.toLowerCase() === 'input') {
-      let input_tag = "input";
-      if (el.type)        input_tag += ` type=${el.type}`;
-      if (el.placeholder) input_tag += ` placeholder=${el.placeholder}`;
-      // if (el.id)          input_tag += ` id=${el.id}`;
-      if (el.ariaLabel)   input_tag += ` aria-label=${el.ariaLabel}`;
-      return input_tag;
+      tag = "input";
+      // if (el.type)        tag += ` type=${el.type}`;
+      if (el.name)        tag += ` name="${el.name}"`;
+      if (el.role)        tag += ` role="${el.role}"`;
+    } else if (el.tagName.toLowerCase() === 'textarea') {
+      tag = "textarea";
+      if (el.maxLength)   tag += ` maxLength="${el.maxLength}"`;
     }
+    if (el.text)          tag += ` text="${el.text}"`;
+    if (el.ariaLabel)     tag += ` aria-label="${el.ariaLabel}"`;
+    if (el.placeholder)   tag += ` placeholder="${el.placeholder}"`;
+    
+    if (tag !== el.tagName.toLowerCase()) return tag;
+
   }).join(',');
 }
 
@@ -388,19 +393,54 @@ const executeInputAction = (item, inputVal) => {
   const element = findElement(item);
   console.log(element);
   if (element) {
-    if (item.tag === 'input') {
-      // // Simulate typing into the input field
-      // element.setAttribute("value", inputVal);
-      // console.log(`Simulated typing in ${item.description}`);
+    if (item.tag === 'input' || item.tag === "textarea") {
       element.value = inputVal;
 
       // Dispatch input and change events to ensure the value is recognized
-      const inputEvent = new Event('input', { bubbles: true });
+      const inputEvent = new Event(item.tag, { bubbles: true });
       const changeEvent = new Event('change', { bubbles: true });
       element.dispatchEvent(inputEvent);
       element.dispatchEvent(changeEvent);
 
-      console.log(`Simulated typing in ${item.description}`);
+      // // Check for jsaction or similar script
+      // if (element.hasAttribute('jsaction')) {
+      //   // Simulate the event that jsaction is listening for
+      //   const jsActionEvent = new Event('input', { bubbles: true });
+      //   element.dispatchEvent(jsActionEvent);
+
+      //   // Optionally, simulate pressing the Enter key if needed
+      //   const enterEvent = new KeyboardEvent('keydown', {
+      //     key: 'Enter',
+      //     code: 'Enter',
+      //     keyCode: 13,
+      //     which: 13,
+      //     bubbles: true,
+      //     cancelable: true
+      //   });
+      //   element.dispatchEvent(enterEvent);
+      // }
+      // Find the form element
+      let form = element.closest('form');
+
+      // Check if the element has a form attribute
+      if (!form && element.form) {
+        form = element.form;
+      }
+
+      if (form) {
+        // Try to find a submit button
+        const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (submitButton) {
+          // Click the submit button if found
+          submitButton.click();
+        } else {
+          // If no submit button is found, directly submit the form
+          form.submit();
+        }
+      } else {
+        console.error('Form element not found');
+      }
+
     }
   } else {
     console.error(`Element not found for ${item.description}`);
