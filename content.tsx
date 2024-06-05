@@ -30,7 +30,9 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 const currentURL = window.location.href;
-const elements = getFilteredElementsAsCSV();
+const raw_elements = getFilteredElementsAsCSV();
+const elements = raw_elements.replace(/(\r\n|\n|\r)/gm, "");
+console.log(elements);
 
 const groq = new Groq({ apiKey: "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", dangerouslyAllowBrowser: true });
 
@@ -39,7 +41,7 @@ async function llm_process_options() {
     "messages": [
       {
         "role": "system",
-        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
+        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Any duplicate entries\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
       },
       {
         "role": "user",
@@ -58,9 +60,11 @@ async function llm_process_options() {
    return JSON.parse(chatCompletion.choices[0].message.content);
 }
 
+// console.log(elements);
+
 // state management for toggleable list
 // data structure notes for @Michael: Shortcut Title, Action (how the action should be executed) - inclusive of any relevant field, button, etc tags to carry it out
-const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
+// const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
 const iconImages = [icon1, icon2, icon3, icon4, icon5];
 const actions = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5']; // placeholder for actions list
 
@@ -93,7 +97,8 @@ function Content() {
     handleProcessOptions();
   }, []);
 
-  console.log(setData);
+  // Add this line to extract the first 5 items and store their descriptions
+  const items = data ? data.slice(0, 5).map(item => item.description) : [];
 
   // function to handle click on icon
   // toggles the isOpen state
@@ -102,7 +107,6 @@ function Content() {
     if (showInput) {
       setShowInput(false);
     }
-    console.log(elements);
   };
 
   // function to handle keydown event
@@ -138,6 +142,7 @@ function Content() {
     }
   }, [showInput]);
 
+  console.log(data);
   // function to handle keydown event on list, used for list toggle navigation and to listen for "Enter/Return" key to show input
   const handleListKeyDown = (event) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -147,11 +152,19 @@ function Content() {
         setFocusedIndex((prevIndex) => (prevIndex + 1) % items.length);
       } else if (event.key === 'ArrowUp') {
         setFocusedIndex((prevIndex) => (prevIndex - 1 + items.length) % items.length);
+      // }
+      // Modify this part of the handleListKeyDown function to execute actions
+      } else if (event.key === 'Enter' || event.key === 'Return') {
+        const selectedItem = data[focusedIndex];
+        console.log(selectedItem);
+        executeAction(selectedItem);
+        setIsOpen(false);
       }
-    } else if (event.key === 'Enter' || event.key === 'Return') {
-      setShowInput(true);
-      setInputPlaceholder(items[focusedIndex]);
-      // setIsOpen(false);
+    // } else if (event.key === 'Enter' || event.key === 'Return') {
+    //   setShowInput(true);
+    //   setInputPlaceholder(items[focusedIndex]);
+    //   // setIsOpen(false);
+    // }
     }
   };
 
@@ -170,9 +183,27 @@ function Content() {
         setInputPlaceholder(items[newIndex]);
         return newIndex;
       });
+    // } else if (event.key === 'Enter' || event.key === 'Return') {
+    //   // Execute action based on selected item
+    //   // TODO HERE - Execute action based on selected item
+    //   setShowInput(false);
+    //   setFocusedIndex((prevIndex) => {
+    //     const newIndex = (prevIndex + 1) % items.length;
+    //     setInputPlaceholder(items[newIndex]);
+    //     return newIndex;
+    //   });
+    //   listRef.current.focus();
+    //   console.log(actions[focusedIndex]);
+    // // General escape keys to close input
+    // // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
+    // } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
+    //   setShowInput(false);
+    // }
+    // Modify this part of the handleInputKeyDown function to execute actions
     } else if (event.key === 'Enter' || event.key === 'Return') {
       // Execute action based on selected item
-      // TODO HERE - Execute action based on selected item
+      const selectedItem = data[focusedIndex];
+      executeAction(selectedItem);
       setShowInput(false);
       setFocusedIndex((prevIndex) => {
         const newIndex = (prevIndex + 1) % items.length;
@@ -181,10 +212,6 @@ function Content() {
       });
       listRef.current.focus();
       console.log(actions[focusedIndex]);
-    // General escape keys to close input
-    // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
-    } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
-      setShowInput(false);
     }
   };
 
@@ -261,13 +288,55 @@ function getFilteredElementsAsCSV() {
   const elements = getInteractableElements();
   return elements.map(el => {
     if (el.tagName.toLowerCase() === 'a') {
-      return `a href=${el.href} aria-label=${el.ariaLabel} text=${el.text}`;
+      let a_tag = `a href=${el.href}`;
+      if (el.ariaLabel) a_tag += ` aria-label=${el.ariaLabel}`;
+      if (el.text)      a_tag += ` text=${el.text}`;
+      return a_tag;
     } else if (el.tagName.toLowerCase() === 'button') {
-      return `button text=${el.text}`;
+      let button_tag = `button`;
+      if (el.ariaLabel) button_tag += ` aria-label=${el.ariaLabel}`;
+      if (el.text)      button_tag += ` text=${el.text}`;
+      if (el.type)      button_tag += ` type=${el.type}`;
+      return button_tag;
     } else if (el.tagName.toLowerCase() === 'input') {
-      return `input type=${el.type} placeholder=${el.placeholder} id=${el.id} aria-label=${el.ariaLabel}`;
+      let input_tag = "input";
+      if (el.type)        input_tag += ` type=${el.type}`;
+      if (el.placeholder) input_tag += ` placeholder=${el.placeholder}`;
+      if (el.id)          input_tag += ` id=${el.id}`;
+      if (el.ariaLabel)   input_tag += ` aria-label=${el.ariaLabel}`;
+      return input_tag;
     }
   }).join(',');
 }
+
+const findElement = (item) => {
+  const { tag, attributes } = item;
+  const selector = Object.entries(attributes)
+    .filter(([key, value]) => value !== '')
+    .map(([key, value]) => `[${key}="${value}"]`)
+    .join('');
+  return document.querySelector(`${tag}${selector}`);
+};
+
+// Add this function to handle actions based on the tag type
+const executeAction = (item) => {
+  const element = findElement(item);
+  if (element) {
+    if (item.tag === 'a' || item.tag === 'button') {
+      // Simulate a click action
+      element.click();
+      console.log(`Simulated click on ${item.description}`);
+    } else if (item.tag === 'input') {
+      // Simulate typing into the input field
+      setShowInput(true);
+      setInputPlaceholder(item.attributes.placeholder || '');
+      inputRef.current.value = 'Your text here'; // Replace with actual input text
+      element.value = inputRef.current.value;
+      console.log(`Simulated typing in ${item.description}`);
+    }
+  } else {
+    console.error(`Element not found for ${item.description}`);
+  }
+};
 
 export default Content
