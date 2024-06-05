@@ -389,8 +389,17 @@ const executeInputAction = (item, inputVal) => {
   console.log(element);
   if (element) {
     if (item.tag === 'input') {
-      // Simulate typing into the input field
+      // // Simulate typing into the input field
+      // element.setAttribute("value", inputVal);
+      // console.log(`Simulated typing in ${item.description}`);
       element.value = inputVal;
+
+      // Dispatch input and change events to ensure the value is recognized
+      const inputEvent = new Event('input', { bubbles: true });
+      const changeEvent = new Event('change', { bubbles: true });
+      element.dispatchEvent(inputEvent);
+      element.dispatchEvent(changeEvent);
+
       console.log(`Simulated typing in ${item.description}`);
     }
   } else {
