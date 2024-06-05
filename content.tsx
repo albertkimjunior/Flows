@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
 import iconImage from "assets/taskpuppy_icon_inactive.png"
 import styleText from 'data-text:./content.css'
+import Groq from 'groq-sdk';
 import type { PlasmoGetStyle } from "plasmo"
 
 export const config: PlasmoCSConfig = {
@@ -23,6 +24,35 @@ export const getStyle: PlasmoGetStyle = () => {
   return style
 }
 
+const currentURL = window.location.href;
+const elements = getFilteredElementsAsCSV();
+
+const groq = new Groq({ apiKey: "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", dangerouslyAllowBrowser: true });
+
+async function llm_process_options() {
+  const chatCompletion = await groq.chat.completions.create({
+    "messages": [
+      {
+        "role": "system",
+        "content": `Given the current URL: ${currentURL}\n\nFrom the following comma-separated list of HTML elements, identify the top 15 essential tags for user interaction ordered by descending likelihood that the user would interact with that element. Exclude advertising tags and inputs that redirect to the current URL. For each essential tag, create a one-line JSON object with:\n\n* The tag name.\n* All attributes from the input (e.g., href, aria-label, etc.). If an attribute is null or empty, return as empty string.\n* A brief description of the tag's function.\n\nOrder of Importance:\n1. Search field\n2. Sort and filter buttons/inputs\n3. Other important input fields\n4. Log-in/log-out buttons\n5. Miscellaneous important elements\n\nExclusions:\n* Advertising links and inputs\n* Links that redirect to the current URL\n\nOutput the JSON objects as a one-line array, enclosed in square brackets. Do not output any other explanatory text.`
+      },
+      {
+        "role": "user",
+        "content": `${elements}`
+      },
+    ],
+    "model": "llama3-70b-8192",
+    "temperature": 0,
+    "max_tokens": 1024,
+    "top_p": 1,
+    "stream": false,
+    "stop": null
+  });
+
+   console.log(chatCompletion.choices[0].message.content);
+   return JSON.parse(chatCompletion.choices[0].message.content);
+}
+
 // state management for toggleable list
 // data structure notes for @Michael: Shortcut Title, Action (how the action should be executed) - inclusive of any relevant field, button, etc tags to carry it out
 const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
@@ -30,6 +60,7 @@ const iconImages = ['assets/icon1.png', 'assets/icon2.png', 'assets/icon3.png', 
 const actions = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5']; // placeholder for actions list
 
 function Content() {
+  const [data, setData] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [showInput, setShowInput] = useState(false);
@@ -41,6 +72,24 @@ function Content() {
   // later a value to adjust to use to display list or display loading indicator gif
   const loaded = true;
 
+  // Regular function that calls the async function using .then()
+  const handleProcessOptions = () => {
+    llm_process_options()
+      .then(result => {
+        setData(result);
+      })
+      .catch(error => {
+        console.error('Error processing options:', error);
+      });
+  };
+
+  // Use useEffect to call the function when the component mounts
+  useEffect(() => {
+    handleProcessOptions();
+  }, []);
+
+  console.log(setData);
+
   // function to handle click on icon
   // toggles the isOpen state
   const handleClick = () => {
@@ -48,6 +97,7 @@ function Content() {
     if (showInput) {
       setShowInput(false);
     }
+    console.log(elements);
   };
 
   // function to handle keydown event
@@ -199,7 +249,7 @@ function getFilteredElementsAsCSV() {
     } else if (el.tagName.toLowerCase() === 'button') {
       return `button text=${el.text}`;
     } else if (el.tagName.toLowerCase() === 'input') {
-      return `input type=${el.type} id=${el.id} aria-label=${el.ariaLabel}`;
+      return `input type=${el.type} placeholder=${el.placeholder} id=${el.id} aria-label=${el.ariaLabel}`;
     }
   }).join(',');
 }
