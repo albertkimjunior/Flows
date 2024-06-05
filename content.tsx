@@ -135,6 +135,7 @@ function Content() {
       if (contentRef.current && !contentRef.current.contains(event.target)) {
         setIsOpen(false);
         setShowInput(false);
+      }
     };
 
     document.addEventListener('click', handleClickOutside, true);
