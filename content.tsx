@@ -177,7 +177,7 @@ function Content() {
       console.log(focusedIndex);
       console.log(data[focusedIndex]);
       if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
-        executeAction(data[focusedIndex]);
+        executeClickAction(data[focusedIndex]);
       } else {
         setShowInput(true);
         setInputPlaceholder(items[focusedIndex]);
@@ -188,10 +188,13 @@ function Content() {
       event.preventDefault();
       const itemIndex = parseInt(event.key, 10) - 1; // Convert key to index (0-based)
       if (itemIndex >= 0 && itemIndex < items.length) {
-        setFocusedIndex(itemIndex);
-        setShowInput(true);
-        setInputPlaceholder(items[itemIndex]);
-        executeAction(data[itemIndex]);
+        if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
+          executeClickAction(data[focusedIndex]);
+        } else {
+          setFocusedIndex(itemIndex);
+          setShowInput(true);
+          setInputPlaceholder(items[itemIndex]);
+        }
       }
     }
   };
@@ -223,6 +226,7 @@ function Content() {
       listRef.current.focus();
       // console.log(actions[focusedIndex]);
       console.log('Input value:', inputValue); // input value is logged into inputValue state variable, use as needed
+      executeInputAction(data[focusedIndex], inputValue);
     // General escape keys to close input
     // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
     } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
@@ -327,7 +331,7 @@ function getFilteredElementsAsCSV() {
       let input_tag = "input";
       if (el.type)        input_tag += ` type=${el.type}`;
       if (el.placeholder) input_tag += ` placeholder=${el.placeholder}`;
-      if (el.id)          input_tag += ` id=${el.id}`;
+      // if (el.id)          input_tag += ` id=${el.id}`;
       if (el.ariaLabel)   input_tag += ` aria-label=${el.ariaLabel}`;
       return input_tag;
     }
@@ -345,19 +349,27 @@ const findElement = (item) => {
 };
 
 // Add this function to handle actions based on the tag type
-const executeAction = (item) => {
+const executeClickAction = (item) => {
   const element = findElement(item);
   if (element) {
     if (item.tag === 'a' || item.tag === 'button') {
       // Simulate a click action
       element.click();
       console.log(`Simulated click on ${item.description}`);
-    } else if (item.tag === 'input') {
+    }
+  } else {
+    console.error(`Element not found for ${item.description}`);
+  }
+};
+
+// Add this function to handle actions based on the tag type
+const executeInputAction = (item, inputVal) => {
+  const element = findElement(item);
+  console.log(element);
+  if (element) {
+    if (item.tag === 'input') {
       // Simulate typing into the input field
-      setShowInput(true);
-      setInputPlaceholder(item.attributes.placeholder || '');
-      inputRef.current.value = 'Your text here'; // Replace with actual input text
-      element.value = inputRef.current.value;
+      element.value = inputVal;
       console.log(`Simulated typing in ${item.description}`);
     }
   } else {
