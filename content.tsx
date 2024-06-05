@@ -60,7 +60,9 @@ async function llm_process_options() {
   });
 
    console.log(chatCompletion.choices[0].message.content);
-   return JSON.parse(chatCompletion.choices[0].message.content);
+   const json_output = chatCompletion.choices[0].message.content.match(/\[([^\]]+)\]/g);
+   console.log(json_output)
+   return JSON.parse(json_output[0]);
 }
 
 // console.log(elements);
@@ -170,17 +172,15 @@ function Content() {
       } else if (event.key === 'ArrowUp') {
         setFocusedIndex((prevIndex) => (prevIndex - 1 + items.length) % items.length);
       }
-      // ACTIVE BLOCK Modify this part of the handleListKeyDown function to execute actions
-      // } else if (event.key === 'Enter' || event.key === 'Return') {
-      //   const selectedItem = data[focusedIndex];
-      //   console.log(selectedItem);
-      //   executeAction(selectedItem);
-      //   setIsOpen(false);
-      // }
-      // ACTIVE BLOCK END
     } else if (event.key === 'Enter' || event.key === 'Return') {
-      setShowInput(true);
-      setInputPlaceholder(items[focusedIndex]);
+      console.log(focusedIndex);
+      console.log(data[focusedIndex]);
+      if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
+        executeAction(data[focusedIndex]);
+      } else {
+        setShowInput(true);
+        setInputPlaceholder(items[focusedIndex]);
+      }
       // setIsOpen(false);
     } else if (event.key >= '1' && event.key <= '5') {
       // Handle keys 1, 2, 3, 4, and 5
@@ -190,6 +190,7 @@ function Content() {
         setFocusedIndex(itemIndex);
         setShowInput(true);
         setInputPlaceholder(items[itemIndex]);
+        executeAction(data[itemIndex]);
       }
     }
   };
@@ -337,6 +338,7 @@ const findElement = (item) => {
     .filter(([key, value]) => value !== '')
     .map(([key, value]) => `[${key}="${value}"]`)
     .join('');
+  console.log(`${tag}${selector}`)
   return document.querySelector(`${tag}${selector}`);
 };
 
