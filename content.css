@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+.custom-input {
+  font-family: 'Inter', sans-serif;
+  font-size: 3em;
+  width: 30vw; /* 30% of the viewport width */
+  background-color: rgba(50, 50, 50, 0.6); /* Dark gray with 60% opacity */
+  color: white;
+  padding: 0.5em;
+  border: none;
+  outline: none;
+}
+
+.custom-input::placeholder {
+  font-family: 'Inter', sans-serif;
+  color: rgba(255, 255, 255, 0.6); /* White with 60% opacity */
+}

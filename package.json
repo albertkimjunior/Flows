@@ -20,12 +20,29 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "https-browserify": "^1.0.0",
     "prettier": "3.2.4",
+    "stream-http": "^3.1.0",
     "typescript": "5.3.3"
   },
   "manifest": {
     "host_permissions": [
       "https://*/*"
+    ],
+    "permissions":
+    [
+      "scripting"
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "assets/*.png",
+          "*.png"
+        ],
+        "matches": [
+          "<all_urls>"
+        ]
+      }
     ]
   }
 }
