@@ -75,10 +75,11 @@ const actions = ['Action 1', 'Action 2', 'Action 3', 'Action 4', 'Action 5']; //
 
 function Content() {
   const [data, setData] = useState<any>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const [showInput, setShowInput] = useState(false);
-  const [inputPlaceholder, setInputPlaceholder] = useState('');
+  const [isOpen, setIsOpen] = useState(false); // state variable for isOpen list toggle status
+  const [focusedIndex, setFocusedIndex] = useState(0); // state variable for focusedIndex in Items list (the focused <li> tag)
+  const [showInput, setShowInput] = useState(false); // state variable for showInput input field toggle status
+  const [inputPlaceholder, setInputPlaceholder] = useState(''); // state variable for inputPlaceholder
+  const [inputValue, setInputValue] = useState(''); // state variable for inputValue
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -220,7 +221,8 @@ function Content() {
         return newIndex;
       });
       listRef.current.focus();
-      console.log(actions[focusedIndex]);
+      // console.log(actions[focusedIndex]);
+      console.log('Input value:', inputValue); // input value is logged into inputValue state variable, use as needed
     // General escape keys to close input
     // relies on fact that when input is in focus, pressing any of these keys will usually mean that user wants to close it
     } else if (event.key === 'Escape' || event.key === 'Option' || event.key === 'Alt') {
@@ -281,7 +283,7 @@ function Content() {
         <div style={{ position: 'fixed', bottom: '35%', left: '50%', transform: 'translate(-50%, 50%)' }}>
           {/* The input field, when in focus, use handleInputKeyDown function to listen to key presses */}
           <img src={taskpuppySearchIcon} alt="Search Icon" style={{ position: 'absolute', width: '36px', height: '34px', marginLeft: '0.9em', marginTop: '1.1em', zIndex: 2 }} />
-          <input ref={inputRef} placeholder={inputPlaceholder} onKeyDown={handleInputKeyDown} className="custom-input"/>
+          <input ref={inputRef} placeholder={inputPlaceholder} onKeyDown={handleInputKeyDown} className="custom-input" value={inputValue} onChange={(e) => setInputValue(e.target.value)}/>
         </div>
       )}
     </div>
