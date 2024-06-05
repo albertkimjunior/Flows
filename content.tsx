@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
 import inactiveImage from "assets/taskpuppy_icon_inactive.png"
 import activeImage from "assets/taskpuppy_icon_active.png"
+import optionKeyImage from "assets/keys/option_key.png"
 import icon1 from "assets/keys/icon1.png"
 import icon2 from "assets/keys/icon2.png"
 import icon3 from "assets/keys/icon3.png"
@@ -44,6 +45,7 @@ function Content() {
   const [inputPlaceholder, setInputPlaceholder] = useState('');
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const contentRef = useRef(null);
 
   // const [loaded, setLoaded] = useState(false);
   // later a value to adjust to use to display list or display loading indicator gif
@@ -69,6 +71,21 @@ function Content() {
       }
     });
   };
+
+  // listens for clicks outside of content elements to defocus Taskpuppy
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contentRef.current && !contentRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setShowInput(false);
+    };
+
+    document.addEventListener('click', handleClickOutside, true);
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside, true);
+    };
+  }, []);
 
   // function to handle keydown event
   const handleToggleKeyDown = (event) => {
@@ -165,16 +182,19 @@ function Content() {
   };
 
   return (
-    <div>
+    <div ref={contentRef}>
       {/* Larger div for the icon and list */}
       <div style={{ position: "fixed", bottom: 20, right: 20 , display: 'flex', flexDirection: 'column-reverse', height: '40vh'}}>
-        {/* Icon image */}
-        <img
-          src={isOpen ? activeImage : inactiveImage}
-          alt="Taskpuppy Icon"
-          onClick={handleClick}
-          className="main-icon"
-        />
+        <div style = {{ display: 'flex', flexDirection: 'row', alignSelf: 'flex-end' }}>
+          <img src={optionKeyImage} alt="Option Key" className="option-key" onClick={handleClick}/>
+          {/* Icon image */}
+          <img
+            src={isOpen ? activeImage : inactiveImage}
+            alt="Taskpuppy Icon"
+            onClick={handleClick}
+            className="main-icon"
+          />
+        </div>
         {/* List of icons */}
         {isOpen && (
           // The items, when in focus, use handleListKeyDown function to listen to key presses

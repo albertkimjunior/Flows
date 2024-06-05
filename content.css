@@ -43,3 +43,12 @@
   height: 106px; /* Set the height to 106 pixels */
   align-self: flex-end;
 }
+
+.option-key {
+  margin-right: 0.8em;
+  padding-bottom: 0.3em;
+  position: relative;
+  align-self: flex-end;
+  width: 3em;
+  height: 3em;
+}
