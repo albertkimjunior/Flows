@@ -272,7 +272,7 @@ function Content() {
           // The items, when in focus, use handleListKeyDown function to listen to key presses
           <ul ref={listRef} tabIndex={-1} onKeyDown={handleListKeyDown}
           style={{
-            backgroundColor: 'rgba(227, 227, 227, 0.85)', // Light gray with 85% opacity
+            backgroundColor: 'rgba(227, 227, 227, 0.9)', // Light gray with 85% opacity
             width: '20vw', // 10% of the viewport width
             alignSelf: 'flex-end', // Align the list to the right edge of the icon
             padding: '1.3em',
