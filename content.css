@@ -16,26 +16,42 @@
   transform: 'translate(-50%, 0%)';
 }
 
+.textarea-container {
+  position: relative;
+  width: 90%;
+  height: 3.2em;
+  max-height: 3.2em;
+  padding: 0.5em 0.5em 1.4em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .custom-input {
+  position: relative;
   font-family: 'Inter', sans-serif;
-  font-size: 2.0em;
-  width: 40vw;
-  background-color: rgba(41, 41, 41, 0.9); /* Dark gray with 60% opacity */
+  font-size: 1.2em;
+  background-color: rgba(16, 16, 16, 0); /* Dark gray with 60% opacity */
   color: white;
-  padding: 0.5em;
+  padding: 0.7em 0.5em;
   border: none;
   outline: none;
   border-radius: 0.5em;
-  padding-left: 2em;
+  overflow-wrap: break-word;
+  width: 100%;
+  overflow-y: auto; /* Enable vertical scrolling if content exceeds the max height */
+  align-self: flex-start;
+  padding: 0em;
+  resize: none;
+  height: 2.6em;
+  max-height: 2.6em;
+  /* padding-left: 2em; */
 }
 
 .custom-input::placeholder {
   font-family: 'Inter', sans-serif;
   color: rgba(220, 220, 220, 0.6); /* White with 60% opacity */
-}
-
-#content-container {
-   /* Set the height to 100% of the viewport height */
 }
 
 .main-icon {
@@ -44,11 +60,9 @@
   align-self: flex-end;
 }
 
-.option-key {
-  margin-right: 0.8em;
-  padding-bottom: 0.3em;
+.activation-key {
   position: relative;
   align-self: flex-end;
-  width: 3em;
-  height: 3em;
+  width: 6em;
+  height: 2.9em;
 }
