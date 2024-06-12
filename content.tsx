@@ -55,14 +55,32 @@ console.log(elements);
 // FLOWS changes
 
 // Note: prob need to change this to JSON object later
-const flows = ['Summarize page actions', 'Search page, fast', 'Suggest a new flow'];
-const flowType = ['direct', 'input', 'input'];
-const flowAction = ['summarize', 'search', 'submit'];
-const mainInputPlaceholders = 
-{
-  'search': 'searchhhhhdh',
-  'submit': 'submitttth'
+const flowsConfig = {
+  "summarize": {
+    "flow": "Summarize page actions",
+    "type": "direct",
+    "inputPlaceholder": "[Enter] for Page Summary & Table of Contents.",
+    "inputFieldValue": ""
+  },
+  "search": {
+    "flow": "Search page, fast",
+    "type": "input",
+    "inputPlaceholder": "searchhhhhdh",
+    "inputFieldValue": ""
+  },
+  "submit": {
+    "flow": "Suggest a new flow",
+    "type": "input",
+    "inputPlaceholder": "submitttth",
+    "inputFieldValue": ""
+  }
 }
+
+const flowKeys = Object.keys(flowsConfig);
+const flowActions = flowKeys.map(key => flowsConfig[key].flow);
+const flowTypes = flowKeys.map(key => flowsConfig[key].type);
+const flowInputPlaceholders = flowKeys.map(key => flowsConfig[key].inputPlaceholder);
+const flowInputFieldValues = flowKeys.map(key => flowsConfig[key].inputFieldValue);
 
 // remember, this is hard-coded. There will be separate data object that adjusts the flowType, flowText, icon, etc based on the flowAction.
 const activeIconImages = [active_summarize, active_search, active_submit];
@@ -71,19 +89,16 @@ const flowsBranch = true;
 const actionOrientedRelease = true;
 
 function Content() {
+  const listRef = useRef(null);
+  const inputRef = useRef(null);
+  const contentRef = useRef(null);
+  const leftMenuRef = useRef(null);
+  const rightMenuRef = useRef(null);
+
+  const [rightMenuHeight, setRightMenuHeight] = useState('0px');
+  
   const [data, setData] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false); // state variable for isOpen list toggle status
-  // useEffect hook to handle focus on list when it is open
-  // useEffect(() => {
-  //   if (isOpen && listRef.current) {
-  //     listRef.current.focus();
-  //   }
-  //   window.addEventListener('keydown', handleToggleKeyDown);
-  //   return () => {
-  //     window.removeEventListener('keydown', handleToggleKeyDown);
-  //   };
-  // }, [isOpen]);
-
   const [focusedIndex, setFocusedIndex] = useState(0); // state variable for focusedIndex in Items list (the focused <li> tag)
   const [inputFocused, setInputFocused] = useState(false); // state variable for inputFocused
   const onInputFocus = () => {
@@ -98,16 +113,22 @@ function Content() {
   }
 
   useEffect(() => {
-    // const handleClickOutside = (event) => {
-    //   if (!contentRef.current.contains(event.target) && !listRef.current.contains(event.target) && !inputRef.current.contains(event.target)) {
-    //     setIsOpen(false);
-    //   }
-    // };
-
     if (isOpen && inputFocused) {
       inputRef.current.focus();
     } else if (isOpen && listRef.current) {
       listRef.current.focus();
+    }
+
+    const updateHeight = () => {
+      if (leftMenuRef.current) {
+        setRightMenuHeight(`${leftMenuRef.current.offsetHeight}px`);
+      }
+    };
+
+    // be prepared to make this more robust, I think it is happening on multiple types of changes to focusedIndex
+    if (focusedIndex === 0) {
+      // Delay the height update slightly to ensure it captures the new state
+      setTimeout(updateHeight, 10);
     }
 
     // document.addEventListener('click', handleClickOutside, true);
@@ -116,13 +137,21 @@ function Content() {
       // document.removeEventListener('click', handleClickOutside, true);
       window.removeEventListener('keydown', handleToggleKeyDown);
     };
-  }, [inputFocused, isOpen]);
+  }, [inputFocused, isOpen, leftMenuRef.current, listRef.current, focusedIndex]);
 
+  const [actionInitiated, initiateAction] = useState(false);
   const [inputPlaceholder, setInputPlaceholder] = useState(''); // state variable for inputPlaceholder
   const [inputValue, setInputValue] = useState(''); // state variable for inputValue
-  const listRef = useRef(null);
-  const inputRef = useRef(null);
-  const contentRef = useRef(null);
+  useEffect(() => {
+    setInputValue(flowInputFieldValues[focusedIndex]); // Update inputValue when focusedIndex changes
+  }, [focusedIndex]);
+
+  // const [rightMenuHeight, setRightMenuHeight] = useState('0px');
+  // useEffect(() => {
+  //   if (rightMenuRef.current) {
+  //     setRightMenuHeight(`${leftMenuRef.current.offsetHeight}px`);
+  //   }
+  // }, [rightMenuRef.current]);
 
   // const [loaded, setLoaded] = useState(false);
   // later a value to adjust to use to display list or display loading indicator gif
@@ -176,6 +205,7 @@ function Content() {
 
   // function to handle keydown event
   const handleToggleKeyDown = (event) => {
+    setInputPlaceholder(flowInputPlaceholders[focusedIndex]);
     // const isToggleCommand = event.key === 'Option' || event.key === 'Alt';
     const isFlowsCommand = event.altKey && event.code === 'Backquote';
 
@@ -190,7 +220,7 @@ function Content() {
     }
 
     if (event.altKey && !isFlowsCommand) {
-      console.log(inputFocused);
+      console.log(flowInputFieldValues);
     }
   };
 
@@ -202,24 +232,25 @@ function Content() {
 
       if (event.key === 'ArrowDown') {
         setFocusedIndex((prevIndex) => {
-          const newIndex = (prevIndex + 1) % flows.length;
-          setInputPlaceholder(mainInputPlaceholders[flowAction[newIndex]]);
+          const newIndex = (prevIndex + 1) % flowKeys.length;
+          setInputPlaceholder(flowInputPlaceholders[newIndex]);
           return newIndex;
         });
       } else if (event.key === 'ArrowUp') {
         setFocusedIndex((prevIndex) => {
-          const newIndex = (prevIndex - 1 + flows.length) % flows.length;
-          setInputPlaceholder(mainInputPlaceholders[flowAction[newIndex]]);
+          const newIndex = (prevIndex - 1 + flowKeys.length) % flowKeys.length;
+          setInputPlaceholder(flowInputPlaceholders[newIndex]);
           return newIndex;
         });
       }
     } else if (event.key === 'Enter' || event.key === 'Return') {
       console.log(focusedIndex);
       // console.log(data[focusedIndex]);
-      if (flowType[focusedIndex] === 'direct') {
+      if (flowTypes[focusedIndex] === 'direct') {
+        initiateAction(true);
         // needs to execute the action directly
-        executeFlowAction(flowAction[focusedIndex]);
-      } else if (flowType[focusedIndex] === 'input') {
+        executeFlowAction(flowActions[focusedIndex]);
+      } else if (flowTypes[focusedIndex] === 'input') {
         // needs to activate input field, with the action being executed on handleInputDown's enter
         inputRef.current.focus();
         setInputFocused(true);
@@ -232,13 +263,17 @@ function Content() {
       //   setInputPlaceholder(mainInputPlaceholders[flowAction[listIndex]]);
       // }
     } else if (event.key >= '1' && event.key <= '5') { // DISABLE IF NOT USING # KEY SHORTCUTS
+      // LOLOL this currently somehow works for event.metaKey and number combo for whatever reason
+
+
+      // NOTE: this won't work out of box anymore because of refactoring o data into flowsConfig JSON
       // Handle keys 1, 2, 3, 4, and 5
-      event.preventDefault();
-      const listIndex = parseInt(event.key, 10) - 1; // Convert key to index (0-based)
-      if (listIndex >= 0 && listIndex < flows.length) {
-        setFocusedIndex(listIndex);
-        setInputPlaceholder(mainInputPlaceholders[flowAction[listIndex]]);
-      }
+      // event.preventDefault();
+      // const listIndex = parseInt(event.key, 10) - 1; // Convert key to index (0-based)
+      // if (listIndex >= 0 && listIndex < flowKeys.length) {
+      //   setFocusedIndex(listIndex);
+      //   setInputPlaceholder(flowInputPlaceholders[listIndex]);
+      // }
       // if (listIndex >= 0 && listIndex < flows.length) {
       //   if (data[focusedIndex].tag === "a" || data[focusedIndex].tag === "button") {
       //     // backend.executeClickAction(data[focusedIndex]);
@@ -253,7 +288,8 @@ function Content() {
   // function to handle keydown event on input, used for input navigation and to listen for "Enter/Return" key to execute action
   const handleInputKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === 'Return') {
-      console.log("This code runs")
+      initiateAction(true);
+      executeFlowAction(flowActions[focusedIndex]);
       // Execute action based on selected item
 
       // TODO HERE - Execute action based on selected item
@@ -274,6 +310,14 @@ function Content() {
     }
   };
 
+  // Probably need to put this in its own .tsx file and pass in the action type as a property
+  // Also will likely pass in input field value & then make that call on webpage somehow?
+  // Do I also need to pass in the ref of the content div where it should then pass in those values?
+  // If a particular URL has already been logged/retrieved, is it better to keep it rather than re-generating later on?
+  // This also has to now make the menu item's 
+  // probably need an actionExecuted array (ugh I need to take all these arrays and make a JSON) that has true or false
+  // and if false for that index, pressing Enter on menu item focuses the right menu contents rather than the input field or executing the action again
+  // also, if flowType is not direct, probably needs to be a way to handle new inputs (new search, new flow submission, etc)
   const executeFlowAction = (action) => {
     console.log(action);
     // some logic to do stuff depending on which action is passed in
@@ -299,113 +343,145 @@ function Content() {
       </div>
       {/* Flows Menu */}
       {flowsBranch && isOpen && (
-        <div style={{
-          position: 'fixed',
-          bottom: flowType[focusedIndex] === 'direct' ? '24vh' : '21vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
-          left: '50%',
-          transform: 'translate(-12vw, 0)',
-          backgroundColor: 'rgba(16, 16, 16, 0.95)',
-          backdropFilter: "blur(10px)",
-          borderRadius: '20px',
-          width: '28vw',
-          maxHeight: '48vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
-          minHeight: flowType[focusedIndex] === 'direct' ? '40vh' : '44vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          color: 'white', // Assuming a light text color for contrast
-          padding: '0'
-        }}
-        >
-          {/* Content inside the div can be added here */}
-          <ul ref={listRef} tabIndex={-1} onKeyDown={handleListKeyDown}
-            style={{
-              backgroundColor: 'rgba(53, 53, 53, 0.95)',
+        <div>
+          {actionInitiated && (
+            <div ref={rightMenuRef} style={{
+              position: 'fixed',
+              bottom: flowTypes[focusedIndex] === 'direct' ? '24vh' : '21vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+              left: actionInitiated ? '36%' : '46%',
+              transform: 'translate(-12vw, 0)',
+              backgroundColor: 'rgba(30, 30, 30, 0.95)',
               backdropFilter: "blur(10px)",
               borderRadius: '20px',
+              width: '48vw',
+              maxHeight: '48vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+              minHeight: flowTypes[focusedIndex] === 'direct' ? '40vh' : '44vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+              height: rightMenuHeight,
               display: 'flex',
               flexDirection: 'column',
-              outline: 'none',
-              margin: '0px',
-              padding: '16px 0px',
-              width: '100%',
-              maxHeight: '30vh',
-              minHeight: '20vh',
-              overflow: 'hidden'
-            }}>
-            {flows.map((flow, index) => (
-              <li
-              key={index}
-              tabIndex={0}
+              alignItems: 'center',
+              color: 'white', // Assuming a light text color for contrast
+              padding: '0'
+            }}
+            >
+              <div style={{ position: 'fixed', display: 'flex', flexDirection: 'column', left: '61%', top: '6%', bottom: '6%', width: '35%'}}>
+                <p style={{ position: 'relative', textAlign: 'left', fontSize: '0.6em', color: 'rgba(207, 207, 207, 1.0)'}}>Flowing FLowing Flowing FLowing Flowing '{flowActions[focusedIndex]}'</p>
+              </div>
+            </div>
+          )}
+          <div ref={leftMenuRef} style={{
+            position: 'fixed',
+            bottom: flowTypes[focusedIndex] === 'direct' ? '24vh' : '21vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+            left: actionInitiated ? '36%' : '46%',
+            transform: 'translate(-12vw, 0)',
+            backgroundColor: 'rgba(16, 16, 16, 0.95)',
+            backdropFilter: "blur(10px)",
+            borderRadius: '20px',
+            width: '28vw',
+            maxHeight: '48vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+            minHeight: flowTypes[focusedIndex] === 'direct' ? '40vh' : '44vh', // REFACTOR BOTTOM UI BOX TO BE ANCHORED TO SLIGHTLY ABOVE BOTTOM OF TOP UI BOX
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            color: 'white', // Assuming a light text color for contrast
+            padding: '0'
+          }}
+          >
+            {/* Content inside the div can be added here */}
+            <ul ref={listRef} tabIndex={-1} onKeyDown={handleListKeyDown}
               style={{
-                backgroundColor: focusedIndex === index ? 'rgba(41, 41, 41)' : 'transparent',
-                boxShadow: focusedIndex === index ? '5px 5px 0px rgba(0,0,0)' : 'none',
+                backgroundColor: 'rgba(53, 53, 53, 0.95)',
+                backdropFilter: "blur(10px)",
+                borderRadius: '20px',
                 display: 'flex',
-                alignItems: 'center',
-                borderRadius: '1.1em',
-                padding: '0.9em 1.2em',
-                fontFamily: 'PressStart2P',
-                color: 'white',
-                fontSize: '0.7em',
-                margin: '1% 6%',
+                flexDirection: 'column',
                 outline: 'none',
-              }}
-              >
-                <img
-                  src={focusedIndex === index ? activeIconImages[index] : inactiveIconImages[index]}
-                  alt={`Icon for ${flow}`}
-                  style={{ width: '12%', height: '22%', marginRight: '1em'}}
-                />
-                <p style={{ maxWidth: flowType[index] !== 'direct' ? '68%' : '86%' }}>{flow}</p>
-                {focusedIndex === index && flowType[index] !== 'direct' && !inputFocused && (
-                  <img
-                    src={return_key}
-                    alt="Return Key"
-                    style={{ position: 'absolute', right: '8%', width: '16%', height: '12%'}}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="textarea-container">
-            {inputFocused && (
-              <img
-                src={escape_key}
-                alt="Escape Key"
+                margin: '0px',
+                padding: '16px 0px',
+                width: '100%',
+                maxHeight: '30vh',
+                minHeight: '20vh',
+                overflow: 'hidden'
+              }}>
+              {flowActions.map((flow, index) => (
+                <li
+                key={index}
+                tabIndex={0}
                 style={{
-                  position: 'absolute',
-                  bottom: '-20%',
-                  left: '0%',
-                  width: '10%',
-                  height: '30%',
-                  zIndex: 2,
+                  backgroundColor: focusedIndex === index ? 'rgba(41, 41, 41)' : 'transparent',
+                  boxShadow: focusedIndex === index ? '5px 5px 0px rgba(0,0,0)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderRadius: '1.1em',
+                  padding: '0.9em 1.2em',
+                  fontFamily: 'PressStart2P',
+                  color: 'white',
+                  fontSize: '0.7em',
+                  margin: '1% 6%',
+                  outline: 'none',
                 }}
-              />
-            )}
-            {((inputFocused && flowType[focusedIndex] !== 'direct') || (flowType[focusedIndex] === 'direct')) && (
+                >
+                  <img
+                    src={focusedIndex === index ? activeIconImages[index] : inactiveIconImages[index]}
+                    alt={`Icon for ${flow}`}
+                    style={{ width: '12%', height: '22%', marginRight: '1em'}}
+                  />
+                  <p style={{ maxWidth: flowTypes[index] !== 'direct' ? '68%' : '86%' }}>{flowActions[index]}</p>
+                  {focusedIndex === index && flowTypes[index] !== 'direct' && !inputFocused && (
+                    <img
+                      src={return_key}
+                      alt="Return Key"
+                      style={{ position: 'absolute', right: '8%', width: '16%', height: '12%'}}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="textarea-container">
+              {inputFocused && (
                 <img
-                  src={return_key}
-                  alt="Return Key"
+                  src={escape_key}
+                  alt="Escape Key"
                   style={{
                     position: 'absolute',
-                    bottom: inputFocused ? '-20%' :'32%',
-                    left: flowType[focusedIndex] !== 'direct' ? '80%' : '30%',
-                    width: '20%',
-                    height: '36%',
+                    bottom: '-20%',
+                    left: '0%',
+                    width: '10%',
+                    height: '30%',
                     zIndex: 2,
                   }}
                 />
-            )}
-            <textarea
-              ref={inputRef}
-              placeholder={inputPlaceholder}
-              onKeyDown={handleInputKeyDown}
-              className="custom-input"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onFocus={onInputFocus}
-              onBlur={onInputBlur}
-              />
+              )}
+              {/* the aforementioned "janky handling logic" */}
+              {((inputFocused && flowTypes[focusedIndex] !== 'direct') || (flowTypes[focusedIndex] === 'direct')) && (
+                  <img
+                    src={return_key}
+                    alt="Return Key"
+                    style={{
+                      position: 'absolute',
+                      bottom: inputFocused ? '-20%' :'32%',
+                      left: '80%',
+                      width: '20%',
+                      height: '36%',
+                      zIndex: 2,
+                    }}
+                  />
+              )}
+              <textarea
+                ref={inputRef}
+                placeholder={inputPlaceholder}
+                onKeyDown={handleInputKeyDown}
+                className="custom-input"
+                value={inputValue}
+                style={{ top: '10%', width: flowTypes[focusedIndex] === 'direct' ? '80%' : '100%' }}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  flowInputFieldValues[focusedIndex] = e.target.value;
+                }}
+                onFocus={onInputFocus}
+                onBlur={onInputBlur}
+                />
+            </div>
           </div>
         </div>
       )}
