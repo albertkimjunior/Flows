@@ -7,6 +7,7 @@ from langchain.schema import Document
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.embeddings import OpenAIEmbeddings
 from unstructured.partition.html import partition_html
+from unstructured.chunking.title import chunk_by_title
 import requests
 
 from transformers import pipeline
@@ -28,6 +29,11 @@ def load_website(url):
 # Step 2: Partition the HTML content
 def partition_html_content(html_content):
     elements = partition_html(text=html_content)
+    chunks = chunk_by_title(elements)
+
+    for chunk in chunks:
+        print(chunk)
+        print("\n\n" + "-"*80)
     return elements
 
 def parse_action_links(elements):
@@ -38,9 +44,17 @@ def parse_action_links(elements):
     return action_links
 
 # Step 3: Create a prompt for ChatGPT to identify top 3 actions
-def create_prompt(elements):
+def top_three_actions(elements):
     text_content = "\n".join(element.text for element in elements if element.text.strip() != "")
+    print(f"what is the length of ")
     prompt = f"The following is the content of a website:\n\n{text_content}\n\nBased on the above content, what are the top 3 actions a user can take on this website?"
+    return prompt
+
+def identify_top_action_links(response, top_action_links):
+    links = ""
+    for key, value in top_action_links.items():
+        links += f"| {key} : {value} |" 
+    prompt = f"given these actions {response} what are the most relevent links {links}"
     return prompt
 
 # Function to interact with OpenAI's ChatGPT
@@ -65,13 +79,13 @@ def prompt_chatgpt(prompt):
 def main(url):
     html_content = load_website(url)
     elements = partition_html_content(html_content)
-    prompt = create_prompt(elements)
-    chatgpt_response = prompt_chatgpt(prompt)
-    print(parse_action_links(elements))
-    return chatgpt_response
+    prompt = top_three_actions(elements)
+    top_actions = prompt_chatgpt(prompt)
+    result = prompt_chatgpt(identify_top_action_links(top_actions, parse_action_links(elements)))
+    return result
 
 if __name__ == "__main__":
-    website_url = "https://hackerdojo.org/"  # Replace with your target URL
+    website_url = "https://chipotle.com/"  # Replace with your target URL
     response = main(website_url)
     print(response)
 
