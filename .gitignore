@@ -34,3 +34,5 @@ dist/
 
 # Content Example Screenshots
 /screenshots
+
+backend/.env
