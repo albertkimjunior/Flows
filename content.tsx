@@ -1,5 +1,16 @@
 import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
+import axios from 'axios'
+
+async function callPythonScript(data) {
+  try {
+    const response = await axios.post('http://localhost:8000/execute-script/', data);
+    // Handle the response from the Django API
+    console.log(response.data);
+  } catch (error) {
+    console.error('Error calling Python script:', error);
+  }
+}
 
 // FLOWS image files
 // logo
@@ -47,7 +58,7 @@ const currentURL = window.location.href;
 let raw_elements = backend.getFilteredElementsAsCSV();
 raw_elements = raw_elements.replace(/(\r\n|\n|\r)/gm, "");
 const elements = raw_elements.replace(/\s+/g, ' ');
-console.log(elements);
+// console.log(elements);
 
 // state management for toggleable list
 // data structure notes for @Michael: Shortcut Title, Action (how the action should be executed) - inclusive of any relevant field, button, etc tags to carry it out
@@ -88,6 +99,15 @@ const inactiveIconImages = [inactive_summarize, inactive_search, inactive_submit
 const flowsBranch = true;
 const actionOrientedRelease = true;
 
+const summarizedContent = {
+  "summary": "",
+  "actions": ["help", "me", "code"],
+  "content": ["", "", ""],
+};
+
+const actionsFromSummarizedContent = summarizedContent.actions;
+
+
 function Content() {
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -100,6 +120,7 @@ function Content() {
   const [data, setData] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false); // state variable for isOpen list toggle status
   const [focusedIndex, setFocusedIndex] = useState(0); // state variable for focusedIndex in Items list (the focused <li> tag)
+  const [focusedContentIndex, setFocusedContentIndex] = useState(0); // state variable for focusedContentIndex in Items list (the focused <li> tag)
   const [inputFocused, setInputFocused] = useState(false); // state variable for inputFocused
   const onInputFocus = () => {
     console.log("input focused")
@@ -155,7 +176,6 @@ function Content() {
 
   // const [loaded, setLoaded] = useState(false);
   // later a value to adjust to use to display list or display loading indicator gif
-  const loaded = true;
 
   // USE FOR BACK-END HANDLING LATER
   // Regular function that calls the async function using .then()
@@ -204,7 +224,7 @@ function Content() {
   // }, []);
 
   // function to handle keydown event
-  const handleToggleKeyDown = (event) => {
+  const handleToggleKeyDown = async (event) => {
     setInputPlaceholder(flowInputPlaceholders[focusedIndex]);
     // const isToggleCommand = event.key === 'Option' || event.key === 'Alt';
     const isFlowsCommand = event.altKey && event.code === 'Backquote';
@@ -213,6 +233,7 @@ function Content() {
     if (isFlowsCommand) {
       console.log('detected key combo')
       setIsOpen(prev => !prev);
+      callPythonScript(currentURL);
     }
 
     if (event.key === 'Escape' && !inputFocused) {
@@ -310,6 +331,26 @@ function Content() {
     }
   };
 
+  const handleContentKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault(); // Prevent default arrow key behavior (scrolling)
+
+      if (event.key === 'ArrowDown') {
+        setFocusedContentIndex((prevIndex) => {
+          const newIndex = (prevIndex + 1) % actionsFromSummarizedContent.length;
+          return newIndex;
+        });
+      } else if (event.key === 'ArrowUp') {
+        setFocusedContentIndex((prevIndex) => {
+          const newIndex = (prevIndex - 1 + actionsFromSummarizedContent.length) % actionsFromSummarizedContent.length;
+          return newIndex;
+        });
+      }
+    } else if (event.key === 'Enter' || event.key === 'Return') {
+      // GO TO THE PLACE MATCHED BY TEXT HACKATHON MONGODB
+    }
+  };
+
   // Probably need to put this in its own .tsx file and pass in the action type as a property
   // Also will likely pass in input field value & then make that call on webpage somehow?
   // Do I also need to pass in the ref of the content div where it should then pass in those values?
@@ -365,7 +406,50 @@ function Content() {
             }}
             >
               <div style={{ position: 'fixed', display: 'flex', flexDirection: 'column', left: '61%', top: '6%', bottom: '6%', width: '35%'}}>
-                <p style={{ position: 'relative', textAlign: 'left', fontSize: '0.6em', color: 'rgba(207, 207, 207, 1.0)'}}>Flowing FLowing Flowing FLowing Flowing '{flowActions[focusedIndex]}'</p>
+                  <ul ref={listRef} tabIndex={-1} onKeyDown={handleContentKeyDown}
+                  style={{
+                    backgroundColor: 'rgba(53, 53, 53, 0.95)',
+                    backdropFilter: "blur(10px)",
+                    borderRadius: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    outline: 'none',
+                    margin: '0px',
+                    padding: '16px 0px',
+                    width: '100%',
+                    maxHeight: '30vh',
+                    minHeight: '20vh',
+                    overflow: 'hidden'
+                  }}>
+                  {actionsFromSummarizedContent.map((flow, index) => (
+                    <li
+                    key={index}
+                    tabIndex={0}
+                    style={{
+                      backgroundColor: focusedContentIndex === index ? 'rgba(41, 41, 41)' : 'transparent',
+                      boxShadow: focusedContentIndex === index ? '5px 5px 0px rgba(0,0,0)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '1.1em',
+                      padding: '0.9em 1.2em',
+                      fontFamily: 'PressStart2P',
+                      color: 'white',
+                      fontSize: '0.7em',
+                      margin: '1% 6%',
+                      outline: 'none',
+                    }}
+                    >
+                      <p style={{ maxWidth: '68%' }}>{actionsFromSummarizedContent[index]}</p>
+                      {focusedContentIndex === index && (
+                      <img
+                        src={return_key}
+                        alt="Return Key"
+                        style={{ position: 'absolute', right: '8%', width: '16%', height: '12%'}}
+                      />
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           )}
