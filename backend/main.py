@@ -54,7 +54,12 @@ def identify_top_action_links(response, top_action_links):
     links = ""
     for key, value in top_action_links.items():
         links += f"| {key} : {value} |" 
-    prompt = f"given these actions {response} what are the most relevent links {links}"
+    prompt = f"given these actions {response} what are the most relevent links {links}.  Return just the top 3 URLs delimited by commas in the format: 'link', 'link', 'link'"
+    return prompt
+
+def summarize(elements):
+    text_content = "\n".join(element.text for element in elements if element.text.strip() != "")
+    prompt = f"summarize the following webpage in 1 sentence with a maximum of 10 words{text_content}"
     return prompt
 
 # Function to interact with OpenAI's ChatGPT
@@ -81,71 +86,40 @@ def main(url):
     elements = partition_html_content(html_content)
     prompt = top_three_actions(elements)
     top_actions = prompt_chatgpt(prompt)
-    result = prompt_chatgpt(identify_top_action_links(top_actions, parse_action_links(elements)))
+    #result = prompt_chatgpt(identify_top_action_links(top_actions, parse_action_links(elements)))
+    result = prompt_chatgpt(summarize(elements))
     return result
 
+# Main function to execute the steps
+def main1(url):
+    html_content = load_website(url)
+    elements = partition_html_content(html_content)
+    prompt = top_three_actions(elements)
+    top_actions = prompt_chatgpt(prompt)
+    result = prompt_chatgpt(identify_top_action_links(top_actions, parse_action_links(elements)))
+    # result = prompt_chatgpt(summarize(elements))
+    return result
+
+# Main function to execute the steps
+def main2(url):
+    html_content = load_website(url)
+    elements = partition_html_content(html_content)
+    prompt = top_three_actions(elements)
+    top_actions = prompt_chatgpt(prompt)
+    #result = prompt_chatgpt(identify_top_action_links(top_actions, parse_action_links(elements)))
+    result = prompt_chatgpt(summarize(elements))
+    return result
+
+def make_magic(website_url):
+    response = main1(website_url)
+    response2 = main2(website_url)
+    return_dict = {"summary":response2,"actions":response.split(",")}
+    print(return_dict)
+    return return_dict
+
+
 if __name__ == "__main__":
-    website_url = "https://chipotle.com/"  # Replace with your target URL
-    response = main(website_url)
-    print(response)
+    make_magic("https://hackerdojo.com/")  # Replace with your target URL
 
+   
 
-
-
-# class ActionFinder:
-#     def __init__(self, chunk_size=5000, chunk_overlap=0):
-
-#         self.action_finder = ActionFinder()
-#         self.chat = ChatOpenAI()
-#         self.llm_chain = self.create_llm_chain()
-#         self.emotion_dict = {}
-
-#     def website_entry(self):
-#         return 
-        
-#     def create_llm_chain(self):
-#         prompt = ChatPromptTemplate(
-#             input_variables=["content", "messages"],
-#             messages=[
-#                 HumanMessagePromptTemplate.from_template("{content}")
-#             ]
-#         )
-#         return LLMChain(llm=self.chat, prompt=prompt)
-
-#     def find_actions(self, entry_key, prompt_text):
-#         if entry_key in self.emotion_dict:
-#             journal_entry = self.emotion_dict[entry_key]['text']
-#             response = self.llm_chain({"content": prompt_text + website_chunk})
-#             return response['text']
-#         else:
-#             return "Invalid entry key."
-    
-
-
-# # Main function to execute the steps
-# def main(url):
-#     html_content = load_website(url)
-#     elements = partition_html_content(html_content)
-#     prompt = create_prompt(elements)
-#     chatgpt_response = prompt_chatgpt(prompt)
-#     return chatgpt_response
-
-# if __name__ == "__main__":
-#     website_url = "https://lite.cnn.com/"  # Replace with your target URL
-#     response = main(website_url)
-#     print(response)
-
-# class website_chunker:
-#     def __init__(self, html_text, chunk_size=5000, chunk_overlap=0):
-#         self.journal_text = journal_text
-#         self.chunk_size = chunk_size
-#         self.chunk_overlap = chunk_overlap
-#         self.docs = self.split_text()
-
-#     def split_text(self):
-#         text_splitter = CharacterTextSplitter(
-#             chunk_size=self.chunk_size,
-#             chunk_overlap=self.chunk_overlap
-#         )
-#         return text_splitter.split_documents([Document(page_content=self.journal_text)])
-    
