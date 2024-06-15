@@ -2,16 +2,6 @@ import React, { useState, useRef, useEffect } from "react"
 import type { PlasmoCSConfig } from "plasmo"
 import axios from 'axios'
 
-async function callPythonScript(data) {
-  try {
-    const response = await axios.post('http://localhost:8000/execute-script/', data);
-    // Handle the response from the Django API
-    console.log(response.data);
-  } catch (error) {
-    console.error('Error calling Python script:', error);
-  }
-}
-
 // FLOWS image files
 // logo
 import flowsFloatingPrompt from "assets/flows_action_logo.png"
@@ -99,16 +89,36 @@ const inactiveIconImages = [inactive_summarize, inactive_search, inactive_submit
 const flowsBranch = true;
 const actionOrientedRelease = true;
 
-const summarizedContent = {
-  "summary": "",
-  "actions": ["help", "me", "code"],
-  "content": ["", "", ""],
-};
-
-const actionsFromSummarizedContent = summarizedContent.actions;
-
-
 function Content() {
+  // summarizedContent update
+  const [summarizedContent, setSummarizedContent] = useState({
+    summary: "test",
+    actions: ["help", "me", "code"],
+    content: ["", "", ""],
+  });
+  
+  const actionsFromSummarizedContent = summarizedContent.actions;
+  
+  async function callPythonScript(data) {
+    try {
+      const response = await axios.post('http://localhost:8000/execute-script/', data);
+      // Handle the response from the Django API
+      console.log(response.data);
+      const base = currentURL.endsWith('/') ? currentURL.slice(0, -1) : currentURL;
+      const actions = response.data.actions.map(action => `${base}/${action.startsWith('/') ? action.slice(1) : action}`);
+  
+      // Update state with new data from the response
+      setSummarizedContent({
+        ...summarizedContent,
+        summary: response.data.summary,
+        actions: actions,
+      });
+    } catch (error) {
+      console.error('Error calling Python script:', error);
+    }
+  }
+
+
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const contentRef = useRef(null);
@@ -233,7 +243,10 @@ function Content() {
     if (isFlowsCommand) {
       console.log('detected key combo')
       setIsOpen(prev => !prev);
-      callPythonScript(currentURL);
+      if (summarizedContent.summary === "test") {
+        const base = currentURL.endsWith('/') ? currentURL.slice(0, -1) : currentURL;
+        callPythonScript(base);
+      }
     }
 
     if (event.key === 'Escape' && !inputFocused) {
@@ -348,6 +361,11 @@ function Content() {
       }
     } else if (event.key === 'Enter' || event.key === 'Return') {
       // GO TO THE PLACE MATCHED BY TEXT HACKATHON MONGODB
+      const url = summarizedContent.actions[focusedContentIndex];
+      console.log(url);
+      if (url) {
+        window.location.href = url; // Navigate to the URL
+      }
     }
   };
 
@@ -406,6 +424,7 @@ function Content() {
             }}
             >
               <div style={{ position: 'fixed', display: 'flex', flexDirection: 'column', left: '61%', top: '6%', bottom: '6%', width: '35%'}}>
+                  <p style={{fontSize: '0.7em'}}>{summarizedContent.summary}</p>
                   <ul ref={listRef} tabIndex={-1} onKeyDown={handleContentKeyDown}
                   style={{
                     backgroundColor: 'rgba(53, 53, 53, 0.95)',
